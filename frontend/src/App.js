@@ -4,6 +4,8 @@ import { SessionProvider } from "./Pages/SessionManager"; // Import the SessionP
 import FlagFinderLandingPage from "./Pages/Homepage";
 import CountryDetailPage from "./Pages/Detail";
 import SearchPage from "./Pages/Region";
+import BookmarkPage from "./Pages/Bookmark";
+import HistoryPage from "./Pages/History";
 
 function App() {
   return (
@@ -19,6 +21,8 @@ function App() {
               element={<CountryDetailPage />}
             />
             <Route path="/search" element={<SearchPage />} />
+            <Route path="/bookmarks" element={<BookmarkPage />} />
+            <Route path="/history" element={<HistoryPage />} />
           </Routes>
         </div>
       </Router>

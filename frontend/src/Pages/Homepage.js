@@ -10,7 +10,6 @@ import {
   Star,
   X,
 } from "lucide-react";
-import Footer from "./Components/Footer";
 import { useSession } from "./SessionManager"; // Import our session hook
 
 export default function FlagFinderLandingPage() {
@@ -151,14 +150,11 @@ export default function FlagFinderLandingPage() {
           </div>
 
           <nav className="hidden md:flex space-x-6">
-            <a href="#" className="text-blue-600 font-medium">
+            <a href="/" className="text-blue-600 font-medium">
               Home
             </a>
-            <a href="#" className="text-gray-600 hover:text-gray-900">
+            <a href="/search" className="text-gray-600 hover:text-gray-900">
               Search
-            </a>
-            <a href="#" className="text-gray-600 hover:text-gray-900">
-              Regions
             </a>
           </nav>
 
@@ -185,24 +181,6 @@ export default function FlagFinderLandingPage() {
               <ListTodo className="h-4 w-4 mr-1" />
               History
             </button>
-
-            <button className="bg-blue-600 rounded-full px-4 py-1 text-sm text-white flex items-center">
-              <svg
-                xmlns="http://www.w3.org/2000/svg"
-                className="h-4 w-4 mr-1"
-                fill="none"
-                viewBox="0 0 24 24"
-                stroke="currentColor"
-              >
-                <path
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  strokeWidth={2}
-                  d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"
-                />
-              </svg>
-              Help
-            </button>
           </div>
         </div>
       </header>
@@ -225,7 +203,10 @@ export default function FlagFinderLandingPage() {
             countries around the globe.
           </p>
           <div className="flex space-x-4">
-            <button className="bg-indigo-500 hover:bg-indigo-600 text-white px-6 py-2 rounded-md shadow-md transition">
+            <button
+              className="bg-indigo-500 hover:bg-indigo-600 text-white px-6 py-2 rounded-md shadow-md transition"
+              onClick={() => navigate("/search")}
+            >
               Start Exploring
             </button>
 
@@ -582,8 +563,6 @@ export default function FlagFinderLandingPage() {
           </div>
         </div>
       </section>
-
-      <Footer />
     </div>
   );
 }

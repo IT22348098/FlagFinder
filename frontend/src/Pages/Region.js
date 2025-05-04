@@ -1,22 +1,23 @@
+//region.js
 import { useState, useEffect } from "react";
 import { useNavigate, useLocation } from "react-router-dom";
 import {
   Search,
   User,
   HelpCircle,
-  Mail,
   ChevronDown,
   Globe,
-  Twitter,
-  Facebook,
-  Linkedin,
-  Youtube,
   Filter,
+  Bookmark,
+  Star,
+  ListTodo,
 } from "lucide-react";
+import { useSession } from "./SessionManager"; // Import our session hook
 
 export default function FlagFinderRegions() {
   const navigate = useNavigate();
   const location = useLocation();
+  const session = useSession(); // Use our session hook
 
   // States for countries data and loading
   const [allCountries, setAllCountries] = useState([]);
@@ -87,12 +88,11 @@ export default function FlagFinderRegions() {
         setRegions(uniqueRegions);
 
         // Extract unique languages
-        const allLanguages = data.flatMap(
-          (country) => country.languages ? Object.values(country.languages) : []
+        const allLanguages = data.flatMap((country) =>
+          country.languages ? Object.values(country.languages) : []
         );
         const uniqueLanguages = ["All", ...new Set(allLanguages)];
         setLanguages(uniqueLanguages.sort());
-
       } catch (err) {
         console.error("Error fetching initial data:", err);
         setError(err.message);
@@ -142,7 +142,10 @@ export default function FlagFinderRegions() {
           return {
             name: country.name.common,
             region: country.region,
-            image: country.flags.png || "/api/placeholder/400/320",
+            image:
+              country.flags.svg ||
+              country.flags.png ||
+              "/api/placeholder/400/320",
             cca3: country.cca3,
             languages: languagesArray,
           };
@@ -152,12 +155,17 @@ export default function FlagFinderRegions() {
         formattedData.sort((a, b) => a.name.localeCompare(b.name));
 
         setAllCountries(formattedData);
-        
+
         // Start with all fetched countries
         let filtered = [...formattedData];
-        
+
         // Apply additional filters that weren't handled by the API endpoint
-        if (selectedRegion && selectedRegion !== "All" && selectedLanguage && selectedLanguage !== "All") {
+        if (
+          selectedRegion &&
+          selectedRegion !== "All" &&
+          selectedLanguage &&
+          selectedLanguage !== "All"
+        ) {
           // If both region and language are selected, we need to filter further
           // (we already filtered by one through the API)
           filtered = filtered.filter((country) =>
@@ -166,7 +174,7 @@ export default function FlagFinderRegions() {
             )
           );
         }
-        
+
         // Apply search filter
         if (searchTerm) {
           filtered = filtered.filter((country) =>
@@ -187,18 +195,50 @@ export default function FlagFinderRegions() {
     if (regions.length > 1 && languages.length > 1) {
       fetchCountries();
     }
-  }, [selectedRegion, selectedLanguage, searchTerm, regions.length, languages.length]);
+  }, [
+    selectedRegion,
+    selectedLanguage,
+    searchTerm,
+    regions.length,
+    languages.length,
+  ]);
 
   // Handler for select button click
   const handleSelectCountry = (country) => {
     console.log("Selected country:", country);
     if (country && country.cca3) {
+      // Track the visited country in session
+      console.log(country);
+      session.addVisitedCountry({
+        cca3: country.cca3,
+        name: country.name,
+        flag: country.image,
+        timestamp: new Date().toISOString(),
+      });
       // Navigate to the detail page with the cca3 code
       navigate(`/country/${country.cca3}`);
     } else {
       console.error("Country or cca3 is undefined:", country);
       // Fallback in case cca3 is missing
       alert("Sorry, country code is missing. Please try another country.");
+    }
+  };
+
+  // Toggle bookmark status
+  const toggleBookmark = (e, country) => {
+    e.stopPropagation(); // Prevent triggering parent click event
+
+    if (session.isBookmarked(country.cca3)) {
+      session.removeBookmark(country.cca3);
+    } else {
+      console.log("here");
+      session.bookmarkCountry({
+        cca3: country.cca3,
+        name: country.name,
+        flag: country.image,
+        timestamp: new Date().toISOString(),
+      });
+      console.log("there");
     }
   };
 
@@ -227,20 +267,6 @@ export default function FlagFinderRegions() {
     setSelectedLanguage("All");
   };
 
-  // Function to fetch a specific country by code
-  const fetchCountryByCode = async (code) => {
-    try {
-      const response = await fetch(`https://restcountries.com/v3.1/alpha/${code}`);
-      if (!response.ok) {
-        throw new Error(`Failed to fetch country: ${response.status}`);
-      }
-      return await response.json();
-    } catch (err) {
-      console.error(`Error fetching country ${code}:`, err);
-      throw err;
-    }
-  };
-
   return (
     <div className="min-h-screen flex flex-col bg-gray-50">
       {/* Header Navigation */}
@@ -255,25 +281,36 @@ export default function FlagFinderRegions() {
               <a href="/" className="text-gray-500 hover:text-gray-900">
                 Home
               </a>
-              <a href="/search" className="text-gray-500 hover:text-gray-900">
-                Search
-              </a>
               <a
-                href="/regions"
+                href="/search"
                 className="text-indigo-600 border-b-2 border-indigo-600 pb-1"
               >
-                Regions
+                Search
               </a>
             </nav>
           </div>
           <div className="flex items-center space-x-4">
-            <button className="flex items-center px-4 py-2 text-gray-600 rounded-lg border border-gray-300">
-              <User className="w-5 h-5 mr-2" />
-              <span>Profile</span>
+            {/* Bookmarks button with counter */}
+            <button
+              className="relative border border-gray-300 rounded-full px-4 py-1 text-sm text-gray-700 flex items-center"
+              onClick={() => navigate("/bookmarks")}
+            >
+              <Bookmark className="h-4 w-4 mr-1" />
+              Bookmarks
+              {session.bookmarkedCountries.length > 0 && (
+                <span className="absolute -top-2 -right-2 bg-red-500 text-white text-xs rounded-full w-5 h-5 flex items-center justify-center">
+                  {session.bookmarkedCountries.length}
+                </span>
+              )}
             </button>
-            <button className="flex items-center px-4 py-2 text-white bg-indigo-500 rounded-lg">
-              <HelpCircle className="w-5 h-5 mr-2" />
-              <span>Help</span>
+
+            {/* History button */}
+            <button
+              className="border border-gray-300 rounded-full px-4 py-1 text-sm text-gray-700 flex items-center"
+              onClick={() => navigate("/history")}
+            >
+              <ListTodo className="h-4 w-4 mr-1" />
+              History
             </button>
           </div>
         </div>
@@ -449,8 +486,20 @@ export default function FlagFinderRegions() {
               filteredCountries.map((country, index) => (
                 <div
                   key={index}
-                  className="flex flex-col bg-white rounded-lg shadow-sm overflow-hidden"
+                  className="flex flex-col bg-white rounded-lg shadow-sm overflow-hidden relative"
                 >
+                  {/* Bookmark button */}
+                  <button
+                    className="absolute right-3 top-3 z-10 p-1 rounded-full bg-white bg-opacity-70"
+                    onClick={(e) => toggleBookmark(e, country)}
+                  >
+                    {session.isBookmarked(country.cca3) ? (
+                      <Star className="w-5 h-5 fill-yellow-500 text-yellow-500" />
+                    ) : (
+                      <Star className="w-5 h-5 text-gray-700" />
+                    )}
+                  </button>
+
                   <div className="aspect-w-4 aspect-h-3 rounded-t-lg overflow-hidden mb-2">
                     <img
                       src={country.image}
@@ -501,158 +550,6 @@ export default function FlagFinderRegions() {
           </div>
         </div>
       </main>
-
-      {/* Footer */}
-      <footer className="bg-white mt-12">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 py-12">
-          {/* Logo and Newsletter */}
-          <div className="flex flex-col items-center mb-12">
-            <div className="flex items-center mb-6">
-              <div className="bg-indigo-500 rounded-full p-2">
-                <Globe className="h-6 w-6 text-white" />
-              </div>
-              <span className="ml-3 text-2xl font-bold">Flag Finder</span>
-            </div>
-
-            <div className="text-center mb-6">
-              <h3 className="text-lg font-medium mb-4">
-                Subscribe to our newsletter
-              </h3>
-              <div className="flex">
-                <div className="relative rounded-md shadow-sm">
-                  <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                    <Mail className="h-5 w-5 text-gray-400" />
-                  </div>
-                  <input
-                    type="email"
-                    placeholder="Input your email"
-                    className="block w-64 pl-10 pr-3 py-2 border border-gray-300 rounded-l-md bg-gray-50 focus:outline-none focus:ring-indigo-500 focus:border-indigo-500"
-                  />
-                </div>
-                <button className="bg-indigo-500 text-white px-4 py-2 rounded-r-md hover:bg-indigo-600 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:ring-offset-2">
-                  Subscribe
-                </button>
-              </div>
-            </div>
-          </div>
-
-          {/* Footer Links */}
-          <div className="grid grid-cols-1 md:grid-cols-4 gap-8">
-            <div>
-              <h3 className="text-lg font-semibold mb-4">Product</h3>
-              <ul className="space-y-2">
-                <li>
-                  <a href="#" className="text-gray-600 hover:text-gray-900">
-                    Features
-                  </a>
-                </li>
-                <li>
-                  <a href="#" className="text-gray-600 hover:text-gray-900">
-                    Pricing
-                  </a>
-                </li>
-              </ul>
-            </div>
-            <div>
-              <h3 className="text-lg font-semibold mb-4">Resources</h3>
-              <ul className="space-y-2">
-                <li>
-                  <a href="#" className="text-gray-600 hover:text-gray-900">
-                    Blog
-                  </a>
-                </li>
-                <li>
-                  <a href="#" className="text-gray-600 hover:text-gray-900">
-                    User guides
-                  </a>
-                </li>
-                <li>
-                  <a href="#" className="text-gray-600 hover:text-gray-900">
-                    Webinars
-                  </a>
-                </li>
-              </ul>
-            </div>
-            <div>
-              <h3 className="text-lg font-semibold mb-4">Company</h3>
-              <ul className="space-y-2">
-                <li>
-                  <a href="#" className="text-gray-600 hover:text-gray-900">
-                    About us
-                  </a>
-                </li>
-                <li>
-                  <a href="#" className="text-gray-600 hover:text-gray-900">
-                    Contact us
-                  </a>
-                </li>
-              </ul>
-            </div>
-            <div>
-              <h3 className="text-lg font-semibold mb-4">Plans & Pricing</h3>
-              <ul className="space-y-2">
-                <li>
-                  <a href="#" className="text-gray-600 hover:text-gray-900">
-                    Personal
-                  </a>
-                </li>
-                <li>
-                  <a href="#" className="text-gray-600 hover:text-gray-900">
-                    Start up
-                  </a>
-                </li>
-                <li>
-                  <a href="#" className="text-gray-600 hover:text-gray-900">
-                    Organization
-                  </a>
-                </li>
-              </ul>
-            </div>
-          </div>
-
-          {/* Bottom Footer */}
-          <div className="mt-12 pt-8 border-t border-gray-200 flex flex-col md:flex-row justify-between items-center">
-            <div className="flex items-center mb-4 md:mb-0">
-              <button className="flex items-center px-4 py-2 bg-gray-100 rounded-md">
-                <span>English</span>
-                <ChevronDown className="ml-2 h-4 w-4" />
-              </button>
-              <div className="ml-4 text-sm text-gray-500">
-                © 2025 Brand, Inc. •{" "}
-                <a href="#" className="hover:underline">
-                  Privacy
-                </a>{" "}
-                •{" "}
-                <a href="#" className="hover:underline">
-                  Terms
-                </a>{" "}
-                •{" "}
-                <a href="#" className="hover:underline">
-                  Sitemap
-                </a>
-              </div>
-            </div>
-            <div className="flex space-x-4">
-              <a href="#" className="text-gray-400 hover:text-blue-400">
-                <Twitter className="h-5 w-5" />
-              </a>
-              <a href="#" className="text-gray-400 hover:text-blue-600">
-                <Facebook className="h-5 w-5" />
-              </a>
-              <a href="#" className="text-gray-400 hover:text-blue-700">
-                <Linkedin className="h-5 w-5" />
-              </a>
-              <a href="#" className="text-gray-400 hover:text-red-600">
-                <Youtube className="h-5 w-5" />
-              </a>
-            </div>
-          </div>
-
-          <div className="mt-6 text-center text-sm text-gray-500">
-            Made with <span className="text-indigo-500">Visily</span>
-          </div>
-        </div>
-      </footer>
     </div>
   );
 }
