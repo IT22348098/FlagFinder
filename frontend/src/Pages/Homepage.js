@@ -553,7 +553,9 @@ export default function FlagFinderLandingPage() {
                   </p>
                   <button
                     className="text-indigo-500 hover:text-indigo-700 text-sm font-medium"
-                    onClick={() => navigate(`/region/${region.toLowerCase()}`)}
+                    onClick={() =>
+                      navigate(`/search?region=${region.toLowerCase()}`)
+                    }
                   >
                     Explore &rarr;
                   </button>
